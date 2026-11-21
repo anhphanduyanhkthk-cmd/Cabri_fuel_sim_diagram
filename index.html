@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cabri G2 Fuel System – Maintenance Training Simulator (Test v0.1)</title>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#1d2330; --muted:#5b6475; --line:#d9dde4;
+  --fuel:#2f7fd8; --fuel-dim:#b9c9de; --elec:#e8891c; --elec-dim:#c9ced6;
+  --ok:#1f9d55; --amber:#f2a516; --red:#d93a3a; --accent:#2b4c7e;
+  --cockpit:#1e232b; --cockpit2:#2a313c;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--accent);color:#fff;padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline}
+header h1{font-size:18px;margin:0;font-weight:650}
+header .refs{font-size:12px;opacity:.85}
+.banner{background:#fff4d6;border-bottom:1px solid #ecd9a0;padding:6px 18px;font-size:12.5px;color:#6b5310}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;padding:14px;max-width:1500px;margin:0 auto}
+@media (max-width:1100px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px}
+svg{width:100%;height:auto;display:block}
+svg .comp{cursor:pointer}
+svg .comp:hover>*:not(text){filter:brightness(.93)}
+svg .comp.sel>rect,svg .comp.sel>circle,svg .comp.sel>path.body{stroke:#ff3d7f!important;stroke-width:3!important}
+svg text{font-family:inherit;font-size:13px;fill:var(--ink);pointer-events:none}
+svg text.small{font-size:11.5px;fill:var(--muted)}
+.pipe{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.wire{fill:none;stroke-width:2.4}
+.flowing{stroke-dasharray:10 8;animation:flow 0.9s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-18}}
+/* cockpit */
+.cockpit{background:var(--cockpit);color:#e7eaf0;border-radius:10px;padding:12px;border:1px solid #0d1015}
+.cockpit h2{color:#9aa4b5}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-bottom:10px}
+.sw{background:var(--cockpit2);border:1px solid #3a4352;border-radius:8px;padding:6px 8px;min-width:78px;text-align:center;cursor:pointer;user-select:none}
+.sw .lbl{font-size:10.5px;color:#9aa4b5;text-transform:uppercase;letter-spacing:.04em}
+.sw .pos{font-weight:700;font-size:13px;margin-top:2px}
+.sw.on .pos{color:#7ee2a8}
+.sw.off .pos{color:#c9ced6}
+.sw.popped{border-color:var(--amber)}
+.sw.popped .pos{color:var(--amber)}
+.lights{display:flex;gap:8px;flex-wrap:wrap}
+.lt{border-radius:6px;padding:6px 10px;font-weight:700;font-size:12px;letter-spacing:.04em;background:#3a3f48;color:#6f7682;border:1px solid #111}
+.lt.amber.lit{background:var(--amber);color:#2b1d00;box-shadow:0 0 12px #f2a51699}
+.lt.green.lit{background:#29c26a;color:#04220f;box-shadow:0 0 12px #29c26a99}
+.lt.blue.lit{background:#3b8cff;color:#fff}
+.tone{font-size:12px;color:#ffd36b;min-height:18px}
+.epm{background:#05070a;border:2px solid #39414d;border-radius:8px;padding:8px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;color:#d8ffe6;position:relative;min-height:150px}
+.epm.offscreen{color:#1b2028}
+.epm .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.epm .k{font-size:10.5px;color:#7f8ea3}
+.epm .v{font-size:20px;font-weight:700}
+.epm .v.red{color:#ff5050}
+.epm .v.amber{color:#ffc04a}
+.epm .bar{height:10px;background:#1a2230;border-radius:3px;overflow:hidden;margin-top:3px}
+.epm .bar>div{height:100%;background:#3b8cff}
+.epm .alarm{margin-top:6px;font-size:12px;color:#ff6b6b;min-height:16px}
+.epm .overlay{position:absolute;inset:0;background:#05070aee;padding:10px;border-radius:6px;font-size:12px}
+.epm button{font:inherit;font-size:10.5px;background:#1a2230;color:#cfe;border:1px solid #39414d;border-radius:4px;padding:1px 6px;cursor:pointer}
+.ground{background:#f0f2f6;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px;color:var(--ink)}
+.ground h2{color:var(--muted)}
+input[type=range]{width:100%}
+button.btn{font:inherit;font-size:13px;background:var(--accent);color:#fff;border:0;border-radius:7px;padding:6px 11px;cursor:pointer}
+button.btn.sec{background:#e6eaf1;color:var(--ink);border:1px solid var(--line)}
+button.btn.warn{background:#b8452f}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:14px 14px 0;max-width:1500px}
+.tabs-wrap{max-width:1500px;margin:0 auto}
+.tab{padding:7px 12px;border-radius:8px 8px 0 0;background:#e3e7ee;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);border:1px solid var(--line);border-bottom:0}
+.tab.act{background:#fff;color:var(--ink)}
+.tabpanel{background:#fff;border:1px solid var(--line);border-radius:0 10px 10px 10px;margin:0 14px 18px;padding:14px;max-width:1472px}
+.hidden{display:none!important}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:#f3f5f8;font-weight:650}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;letter-spacing:.03em}
+.tag.v{background:#dcf3e5;color:#166c3b}
+.tag.d{background:#e2ebfa;color:#284f8f}
+.tag.a{background:#fde8cc;color:#8a4b00}
+.tag.t{background:#efe2fa;color:#5d2c86}
+.src{font-size:12px;color:var(--muted)}
+.log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;max-height:260px;overflow:auto;background:#f7f8fa;border:1px solid var(--line);border-radius:6px;padding:8px}
+.meas{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;background:#0f1a12;color:#9dff9d;padding:8px 12px;border-radius:6px;display:inline-block;min-width:260px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.callout{background:#f3f6fb;border-left:4px solid var(--accent);padding:8px 12px;border-radius:4px;margin:8px 0}
+.callout.good{border-color:var(--ok);background:#eefaf2}
+.callout.bad{border-color:var(--red);background:#fdf0f0}
+label.opt{display:block;padding:4px 0;cursor:pointer}
+select{font:inherit;padding:4px 6px;border-radius:6px;border:1px solid var(--line)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:18px;height:4px;margin-right:5px;vertical-align:middle;background:var(--c)}
+.keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 14px}
+.keyitem{display:flex;gap:8px;align-items:flex-start;padding:5px 6px;border-radius:6px;cursor:pointer}
+.keyitem:hover{background:#f1f4f9}
+.keyitem .n{flex:0 0 22px;height:22px;border-radius:50%;background:#2b4c7e;color:#fff;font-weight:700;font-size:11.5px;display:flex;align-items:center;justify-content:center}
+.keyitem .nm{font-weight:650;font-size:13px}
+.keyitem .fd{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cabri G2 Fuel System — Maintenance Training Simulator <span style="font-weight:400;opacity:.8">· Test v0.1</span></h1>
+  <div class="refs">Sources: MM J70-002 Issue 08 · RFM J40-001 Issue 11 · IPC Rev D (printed 2026-11-21)</div>
+</header>
+
+
+<main>
+  <section class="card">
+    <h2>System schematic (simplified layout — click any component)</h2>
+    <svg id="schem" viewBox="0 0 1000 640" aria-label="Fuel system schematic"></svg>
+    <div class="legend">
+      <span style="--c:var(--fuel)">Fuel, pressurised/flowing</span>
+      <span style="--c:var(--fuel-dim)">Fuel line, no pressure</span>
+      <span style="--c:var(--elec)">Wire energised</span>
+      <span style="--c:var(--elec-dim)">Wire de-energised</span>
+    </div>
+    <h2 style="margin-top:14px">Component key — function</h2>
+    <div id="keyTable"></div>
+  </section>
+
+  <aside>
+    <div class="cockpit">
+      <h2>Cockpit</h2>
+      <div class="row">
+        <div class="sw" id="swMaster"><div class="lbl">Master</div><div class="pos"></div></div>
+        <div class="sw" id="swPump"><div class="lbl">Fuel pump</div><div class="pos"></div></div>
+        <div class="sw" id="swBarc"><div class="lbl">BARC / NR sw</div><div class="pos"></div></div>
+        <div class="sw" id="swValve"><div class="lbl">Fuel valve</div><div class="pos"></div></div>
+      </div>
+      <div class="row">
+        <div class="sw" id="cbB7"><div class="lbl">B7 5A Pump·Clutch</div><div class="pos"></div></div>
+        <div style="flex:1;min-width:150px">
+          <button class="btn" id="btnStart">Start engine</button>
+          <button class="btn sec" id="btnStop">Shut down</button>
+          <div class="src" id="b7note" style="color:#ffc04a;margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="lights" style="margin-bottom:6px">
+        <div class="lt amber" id="ltLowFuel">LOW FUEL</div>
+        <div class="lt green" id="ltBarcGreen">BARC BACKUP</div>
+      </div>
+      <div class="tone" id="tone"></div>
+      <div class="epm" id="epm">
+        <div class="grid">
+          <div><div class="k">FUEL QTY (L)</div><div class="v" id="epmQty">—</div><div class="bar"><div id="epmBar" style="width:0"></div></div></div>
+          <div><div class="k">FUEL P (bar)</div><div class="v" id="epmFp">—</div></div>
+          <div><div class="k" id="epmFlowK">FLOW MODE</div><div class="v" id="epmFlow" style="font-size:16px">—</div></div>
+          <div><div class="k">ENGINE</div><div class="v" id="epmEng" style="font-size:16px">—</div></div>
+        </div>
+        <div style="margin-top:6px"><button id="epmKey3">#3 flow mode</button> <button id="epmTest">Sensor test page</button> <span style="font-size:10px;color:#7f8ea3">n/s = flow values not simulated</span></div>
+        <div class="alarm" id="epmAlarm"></div>
+        <div class="overlay hidden" id="epmOverlay"></div>
+      </div>
+    </div>
+
+    <div class="ground">
+      <h2>Ground / environment</h2>
+      <div>Actual fuel in tank (above unusable): <b id="fuelVal"></b> L</div>
+      <input type="range" id="fuelSlider" min="0" max="170" step="0.5">
+      <div class="src">Capacity 170 L, unusable 1.5 L — RFM 2-5</div>
+    </div>
+  </aside>
+</main>
+
+<div class="tabs-wrap">
+<div class="tabs" id="tabs">
+  <div class="tab act" data-t="info">Component info</div>
+  <div class="tab" data-t="meas">Measurements &amp; inspection</div>
+  <div class="tab" data-t="scen">Troubleshooting scenarios</div>
+  <div class="tab" data-t="instr">Instructor</div>
+  <div class="tab" data-t="src">Sources &amp; open questions</div>
+  <div class="tab" data-t="log">Event log</div>
+</div>
+<div class="tabpanel" id="p-info"></div>
+<div class="tabpanel hidden" id="p-meas"></div>
+<div class="tabpanel hidden" id="p-scen"></div>
+<div class="tabpanel hidden" id="p-instr"></div>
+<div class="tabpanel hidden" id="p-src"></div>
+<div class="tabpanel hidden" id="p-log"><div class="log" id="logBox"></div></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   SOURCE REGISTER
+   ============================================================ */
+const SRC = {
+  RFM_2_5:  "RFM J40-001 Iss.11, Sect.2 p.2-5 (Fuel / Fuel pressure limits)",
+  RFM_3_EPM:"RFM J40-001 Iss.11, Sect.3, EPM indications table (Fuel P, LOW FUEL)",
+  RFM_3_LT: "RFM J40-001 Iss.11, Sect.3, warning/caution lights table (LOW FUEL)",
+  RFM_3_AUR:"RFM J40-001 Iss.11, Sect.3, Aural warnings",
+  RFM_3_FIRE:"RFM J40-001 Iss.11, Sect.3, Engine fire (fuel valve OFF, fuel pump OFF)",
+  RFM_4_9:  "RFM J40-001 Iss.11, Sect.4 p.4-9 (pre-start: no alarm except OIL P, FUEL P…)",
+  RFM_4_11: "RFM J40-001 Iss.11, Sect.4, Starting the engine (Fuel pump ON, check fuel pressure increase)",
+  RFM_4_14: "RFM J40-001 Iss.11, Sect.4 p.4-14 (trust LOW FUEL light; gauge accuracy)",
+  RFM_4_15: "RFM J40-001 Iss.11, Sect.4 p.4-15 (alternate fuel, XXX above 179 L)",
+  RFM_7_6:  "RFM J40-001 Iss.11, Sect.7 p.7-6 (Fuel system description & diagram)",
+  RFM_7_7:  "RFM J40-001 Iss.11, Sect.7, Breaker panel (Pump/Clutch 5 A: fuel pump, clutch release, carb heating)",
+  RFM_7_13: "RFM J40-001 Iss.11, Sect.7 p.7-13 (EPM self-test, amber FAILED)",
+  RFM_7_15: "RFM J40-001 Iss.11, Sect.7 p.7-15 (Fuel flow modes, auto instantaneous flow < 10 L)",
+  RFM_7_17: "RFM J40-001 Iss.11, Sect.7 p.7-17/18 (BARC; LOW FUEL functions)",
+  MM_E5_3:  "MM J70-002 Iss.08, E-5 Powerplant description (fuel system composition)",
+  MM_55A01: "MM J70-002 Iss.08, 55-A-01 Fuel Circuit Inspection (100 h)",
+  MM_55A02: "MM J70-002 Iss.08, 55-A-02 Gascolator Cleaning (50 h)",
+  MM_55A03: "MM J70-002 Iss.08, 55-A-03 Low Fuel Switch Check",
+  MM_55A04: "MM J70-002 Iss.08, 55-A-04 Fuel Gauge Check and Calibration",
+  MM_55A10: "MM J70-002 Iss.08, 55-A-10 / 55-A-11 Fuel Manifold Removal / Installation",
+  MM_55A12: "MM J70-002 Iss.08, 55-A-12 Fuel Gauge Circuit Board Replacement",
+  MM_55A14: "MM J70-002 Iss.08, 55-A-14 Fuel Gauge Troubleshooting",
+  MM_55A20: "MM J70-002 Iss.08, 55-A-20/21/22 Fuel Bladder",
+  MM_71C01: "MM J70-002 Iss.08, 71-C-01 Power Generation and Distribution (B7 5 A Pump–Clutch–Carb. heating)",
+  MM_71C20: "MM J70-002 Iss.08, 71-C-20 Fuel System wiring diagram (C-FUEL pins 1–6)",
+  MM_H1:    "MM J70-002 Iss.08, H-1 Post-Maintenance Ground Run, steps 21 & 31",
+  MM_F:     "MM J70-002 Iss.08, Section F Troubleshooting (cold engine does not start)",
+  MM_A3:    "MM J70-002 Iss.08, A-33 Defueling",
+  IPC_540:  "IPC Rev D, fig. 5.4-00 (Fuel manifold assy)",
+  IPC_542:  "IPC Rev D, fig. 5.4-02 (Fuel system installation)"
+};
+const tagFull = t => `<span class="tag ${t==='V'?'v':t==='D'?'d':t==='T'?'t':'a'}">${{V:'VERIFIED',D:'DERIVED',T:'TRAINING',A:'ASSUMED'}[t]}</span>`;
+
+const tag = t => '';
+/* ============================================================
+   COMPONENT DATA (IPC Rev D – check effectivity vs aircraft configuration)
+   ============================================================ */
+const COMP = {
+  tank:{name:"Fuel tank (bladder)",pn:"G55-00-100",ipc:"5.4-02 item 1",
+    fn:"Single crash-resistant tank in the left side of the fuselage. 170 L maximum, 1.5 L unusable.",
+    mm:["55-A-01","55-A-20/21","55-A-22 (15-year)"],src:["RFM_7_6","RFM_2_5","MM_E5_3","MM_55A20","IPC_542"],t:"V"},
+  vent:{name:"Tank vent + rollover valve",pn:"G55-32-100 (rollover valve, SB17-006)",ipc:"5.4-02 item 45",
+    fn:"Vents the tank. MM 55-A-01: vent tube must protrude 3–6 mm under the belly; the vent angle must face forward.",
+    mm:["55-A-01"],src:["MM_55A01","RFM_7_6","IPC_542"],t:"V"},
+  cap:{name:"Fuel filler cap",pn:"G55-02-100 / G55-05-100 locking (SB09-016)",ipc:"5.4-02 item 9",
+    fn:"Filler cap. Preflight: closed, secured (and key-locked if equipped).",mm:["55-A-01"],src:["IPC_542","RFM_7_6"],t:"V"},
+  pump:{name:"Electric boost pump (submerged)",pn:"HG70-0976",ipc:"5.4-00 item 9 (in fuel manifold assy)",
+    fn:"Immersed electric boost pump, semi-centrifugal type, mounted on the fuel manifold. Powered via B7 → PUMP switch → C-FUEL pin 1.",
+    mm:["55-A-10/11 (fuel manifold)","H-1 step 21: pump ON → fuel pressure increase ≥ 0.2 bar"],
+    src:["MM_E5_3","IPC_540","MM_71C20","MM_H1"],t:"V"},
+  screen:{name:"Fuel pump screen (outlet screen)",pn:"G55-02-200",ipc:"5.4-00 item 4",
+    fn:"Screen at the boost pump inlet on the manifold.",mm:["55-A-10/11"],src:["IPC_540","MM_E5_3"],t:"V"},
+  float:{name:"Low fuel switch (float)",pn:"HG77-0985",ipc:"5.4-00 item 8",
+    fn:"Float switch, totally independent from the gauge. Wired to the BARC: automatic test at start-up, 5-s delay against sloshing, audio tone when light comes ON. Setting: ON at 14–16 L (draining), OFF at 15–17 L (filling), actual quantities above unusable. If re-assembled upside down, logic inverts (check ‘NC’ up / ‘NO’ down).",
+    mm:["55-A-03","55-A-10/11"],src:["MM_55A03","IPC_540","MM_71C20"],t:"V"},
+  probe:{name:"Fuel gauge probe (capacitive)",pn:"G55-03-101",ipc:"5.4-00 item 3",
+    fn:"Two coaxial tubes forming a capacitive sensor, connected to the gauge board ‘In’ terminal. Must be clean, dry and electrically isolated between tubes.",
+    mm:["55-A-04","55-A-14 steps 9–10"],src:["MM_55A04","MM_55A14","IPC_540","MM_71C20"],t:"V"},
+  board:{name:"Fuel gauge board",pn:"G71-41-204",ipc:"5.4-00 item 17.3",
+    fn:"Converts probe capacitance into a 0–5 V square wave, ~50 % duty cycle, 3800–7300 Hz, sent to EPM (C-FUEL pin 3 → EPM 25-25). Powered from pin 5 (~12 V engine off) and pin 6 GND. Has an adjustable condenser for calibration.",
+    mm:["55-A-04","55-A-12","55-A-14"],src:["MM_55A14","MM_55A04","MM_55A12","MM_71C20","IPC_540"],t:"V"},
+  mdrain:{name:"Manifold drain valve",pn:"HG63-0961",ipc:"5.4-00 item 10",
+    fn:"Drains non-usable fuel (less than 0.2 L remains after use).",mm:["55-A-10","A-33"],src:["MM_55A10","MM_A3","IPC_540"],t:"V"},
+  valve:{name:"Fuel shut-off valve",pn:"HG63-0970 (SB13-017)",ipc:"5.4-02 item 10",
+    fn:"Located on the cabin bulkhead. Closed during gascolator cleaning and in the engine fire procedure.",
+    mm:["55-A-02","F: cold engine does not start"],src:["MM_E5_3","IPC_542","MM_55A02","RFM_3_FIRE","MM_F"],t:"V"},
+  gasc:{name:"Gascolator + filter + drain",pn:"HG63-0965 · filter HG63-1952 · drain HG63-0962",ipc:"5.4-02 items 17, 43, 18",
+    fn:"Gascolator with water-separation screen and drain valve. Filter cleaned every 50 h with compressed air or soft brush only (water-repellent coating).",
+    mm:["55-A-02 (50 h)"],src:["MM_E5_3","MM_55A02","IPC_542"],t:"V"},
+  flow:{name:"Fuel flow sender",pn:"G71-30-100",ipc:"5.4-02 item 21",
+    fn:"Measures fuel flow for the EPM fuel computer (remaining time, instantaneous and average flow).",
+    mm:["Preflight check"],src:["MM_E5_3","IPC_542","RFM_7_15"],t:"V"},
+  epump:{name:"Engine-driven fuel pump",pn:"Lycoming engine part — see Lycoming documentation",ipc:"not in HG IPC",
+    fn:"Engine-installed diaphragm pump. With the engine running and the boost pump OFF, fuel pressure must remain in the green arc (MM H-1 step 31).",
+    mm:["H-1 step 26 (leak check), step 31"],src:["MM_E5_3","MM_H1","RFM_7_6"],t:"V"},
+  psens:{name:"Fuel pressure sender",pn:"G55-22-201 (SB23-004)",ipc:"5.4-02 item 31.2",
+    fn:"Measures fuel pressure for the EPM ‘FUEL P’ indication. Located downstream of the engine pump on the carburettor feed (RFM 7-6 diagram).",
+    mm:["—"],src:["RFM_7_6","IPC_542","RFM_3_EPM"],t:"V"},
+  carb:{name:"Carburettor",pn:"Engine part",ipc:"—",
+    fn:"Lycoming O-360-J2A carburettor. Outside the scope of this fuel-system test module.",
+    mm:["50-C-30/31"],src:["RFM_7_6"],t:"V"},
+  b7:{name:"Circuit breaker B7 — 5 A ‘Pump – Clutch – Carb. heating’",pn:"—",ipc:"—",
+    fn:"Bus-bar breaker feeding the fuel pump, clutch (release) and carburettor heating. A popped B7 affects all three. RFM: if a breaker pops, wait a few seconds before resetting; do not try twice.",
+    mm:["71-C-01","71-C-20"],src:["MM_71C01","RFM_7_7","MM_71C20"],t:"V"},
+  pumpsw:{name:"PUMP switch",pn:"not extracted for this module",ipc:"—",
+    fn:"Switches B7 supply to C-FUEL pin 1 (boost pump).",mm:["71-C-20"],src:["MM_71C20"],t:"V"},
+  cfuel:{name:"C-FUEL connector (6 pins)",pn:"not extracted for this module",ipc:"—",
+    fn:"Pin 1 PUMP · Pin 2 BARC_LF → BARC 4 ‘Low fuel’ · Pin 3 gauge OUT → EPM 25-25 · Pin 4 TEST ← BARC 24 ‘Test output’ · Pin 5 +14 V supply (EPM/SENS) · Pin 6 GND (MGP ground module).",
+    mm:["71-C-20","55-A-14"],src:["MM_71C20","MM_55A14"],t:"V"},
+  barc:{name:"BARC (fuel and rotor alarm device)",pn:"not extracted for this module",ipc:"—",
+    fn:"Alternate means in case of EPM failure. Drives the LOW FUEL light from the independent float switch (< 12 L per RFM), with short tone. Tests the lights at MASTER ON. Can be switched to direct battery backup.",
+    mm:["71-B-01"],src:["RFM_7_17","MM_55A03","MM_71C20"],t:"V"},
+  epm:{name:"EPM (Electronic Pilot Monitor)",pn:"not extracted for this module",ipc:"—",
+    fn:"Displays fuel quantity (gauge), FUEL P, fuel flow modes. Subtracts 1.5 L for sloshing. Shows XXX on invalid gauge signal; self-test page shows amber FAILED for a line/sensor failure.",
+    mm:["55-A-04","55-A-14"],src:["MM_55A04","MM_55A14","RFM_7_13","RFM_7_15","RFM_3_EPM"],t:"V"},
+  bus:{name:"Bus bar",pn:"—",ipc:"—",fn:"Main electrical bus bar, fed from the battery through the MASTER relay. Supplies the breakers B1–B11 (B7 = Pump – Clutch – Carb. heating).",mm:["71-C-01"],src:["MM_71C01"],t:"V"},
+  lflight:{name:"LOW FUEL caution light (amber)",pn:"—",ipc:"—",fn:"Driven by the BARC from the independent low fuel float switch. Comes ON at about 12 L remaining (RFM), with a short tone. Operative with MASTER OFF when the BARC switch is on backup.",mm:["55-A-03"],src:["RFM_3_LT","RFM_3_AUR","RFM_7_17","MM_55A03"],t:"V"},
+  mgp:{name:"MGP ground module",pn:"—",ipc:"—",fn:"Ground return for C-FUEL pin 6.",mm:["71-C-20","71-C-30"],src:["MM_71C20"],t:"V"}
+};
+
+/* ============================================================
+   FAULTS (instructor / scenarios)
+   ============================================================ */
+const FAULTS = {
+  b7Pop:     {name:"B7 breaker popped", rect:"Investigate cause, reset B7 once (RFM: do not try twice). Note: B7 also feeds clutch release and carb heating.", t:"V", src:["RFM_7_7","MM_71C01"]},
+  valveOff:  {name:"Fuel shut-off valve left OFF", rect:"Open fuel valve; MM Section F lists this check for ‘cold engine does not start’.", t:"V", src:["MM_F","MM_55A02"]},
+  probeDisc: {name:"Gauge probe disconnected from gauge board", rect:"Reconnect/repair probe wiring at board (55-A-14 step 7, 10; 55-A-12), then calibrate (55-A-04).", t:"V", src:["MM_55A14"]},
+  probeShort:{name:"Gauge probe shorted / contaminated", rect:"Remove manifold, clean probe with compressed air, check coaxial tubes isolated (55-A-14 steps 9–10), then calibrate (55-A-04).", t:"V", src:["MM_55A14"]},
+  boardFail: {name:"Fuel gauge board defective", rect:"Replace board per 55-A-12, then calibrate per 55-A-04.", t:"V", src:["MM_55A14","MM_55A12"]},
+  pin3Open:  {name:"Open wire C-FUEL pin 3 → EPM 25-25", rect:"Repair wiring between EPM and C-FUEL (55-A-14 step 6; 71-B/71-C-20 diagrams).", t:"V", src:["MM_55A14","MM_71C20"]},
+  pin5Lost:  {name:"No +14 V at C-FUEL pin 5 (supply wiring)", rect:"Check wiring between EPM and C-FUEL (55-A-14 step 3).", t:"V", src:["MM_55A14","MM_71C20"]},
+  floatInv:  {name:"Low fuel float installed upside down", rect:"Remove manifold (55-A-10), flip float (‘NC’ up, ‘NO’ down), install (55-A-11).", t:"V", src:["MM_55A03"]}
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S = {
+  master:false, pumpSw:false, barc:"MAIN", valveOn:true, b7In:true,
+  engine:"OFF", starveT:0, runT:0,
+  fuel:60,
+  faults:new Set(),
+  lfRaw:false, lfOut:false, lfTimer:0, lfLight:false, toneT:0,
+  barcBootT:-1, epmBootT:-1, epmTestManual:false,
+  flowMode:0, cfuel:"connected", meter:"v56", sel:null,
+  scenario:null, actions:[], prevMaster:false, prevBarcPowered:false
+};
+const log = (m) => { const t=new Date().toLocaleTimeString(); S.actions.push(m); const b=document.getElementById('logBox'); b.innerHTML = `<div>[${t}] ${m}</div>` + b.innerHTML; };
+
+/* ============================================================
+   SYSTEM MODEL
+   ============================================================ */
+function model(){
+  const f = S.faults, m = {};
+  m.bus = S.master;                                   // battery assumed charged  [ASSUMED]
+  m.busV = m.bus ? (S.engine==="RUNNING" ? 13.7 : 12.0) : 0; // 12 V engine off: MM 55-A-14 step 3; 13.7 V placard RFM [DERIVED]
+  m.b7 = S.b7In;
+  m.pin1 = (m.bus && m.b7 && S.pumpSw) ? m.busV : 0;  // 71-C-20 [DERIVED]
+  m.pumpRun = m.pin1 > 0;
+  m.usable = S.fuel > 0;
+  m.path = m.usable && S.valveOn;
+  // fuel pressure (sensor downstream of engine pump, RFM 7-6)
+  // Only source-stated bands: pump ON engine off → rise ≥ 0.2 bar (MM H-1 st.21); engine pump alone → green arc (H-1 st.31)
+  if(!m.path) m.fpBand = 'LOW';
+  else if(S.engine==="RUNNING") m.fpBand = 'GREEN';
+  else m.fpBand = m.pumpRun ? 'RISE' : 'LOW';
+  m.epm = m.bus;                                                  // B5 not modelled [ASSUMED]
+  m.connected = S.cfuel !== "disconnected";
+  m.pin5 = (m.bus && !f.has('pin5Lost')) ? m.busV : 0;
+  m.boardPowered = m.connected && m.pin5 > 0;
+  m.boardSignal = m.boardPowered && !f.has('probeDisc') && !f.has('probeShort') && !f.has('boardFail');
+  m.freq = !m.boardPowered ? 'NONE' : (f.has('probeDisc') ? '20K' : ((f.has('probeShort')||f.has('boardFail')) ? 'NONE' : 'BAND'));
+  m.gaugeValid = m.epm && m.boardSignal && !f.has('pin3Open');
+  let q = Math.max(0, S.fuel - 1.5);   // MM 55-A-04: EPM subtracts 1.5 L for sloshing
+  m.qty = m.gaugeValid ? Math.round(q) : null;
+  if(m.qty !== null && m.qty > 179) m.qty = null;                 // RFM 4-15
+  m.barcPowered = (S.master && S.barc==="MAIN") || S.barc==="BACKUP";
+  m.fpAlarm = m.epm && m.fpBand==='LOW';
+  m.qtyRed = m.qty !== null && m.qty < 10;
+  return m;
+}
+
+function step(dt){
+  const m0 = model();
+  // power-up events
+  if(S.master && !S.prevMaster){ S.epmBootT = 0; log("MASTER ON — EPM start-up / self-test"); }
+  if(!S.master && S.prevMaster){ S.epmBootT=-1; log("MASTER OFF"); }
+  if(m0.barcPowered && !S.prevBarcPowered){ S.barcBootT = 0; }
+  if(!m0.barcPowered){ S.barcBootT=-1; S.lfLight=false; S.lfTimer=0; }
+  S.prevMaster = S.master; S.prevBarcPowered = m0.barcPowered;
+  if(S.epmBootT>=0) S.epmBootT += dt;
+  if(S.barcBootT>=0) S.barcBootT += dt;
+
+  if(S.engine==="RUNNING"){
+    S.runT += dt;
+  }
+  // engine starvation (simplified)
+  const m = model();
+  if(S.engine==="RUNNING"){
+    if(!m.path){ S.starveT += dt; if(S.starveT>6){ S.engine="OFF"; S.starveT=0; S.runT=0; log("Engine quit — no fuel feed (fuel valve OFF or tank empty)"); } }
+    else S.starveT = 0;
+  }
+  // low fuel float with hysteresis (MM 55-A-03: ON 14–16 L draining, OFF 15–17 L filling)
+  if(S.fuel <= 15) S.lfRaw = true; else if(S.fuel >= 16) S.lfRaw = false;
+  S.lfOut = S.faults.has('floatInv') ? !S.lfRaw : S.lfRaw;
+  // BARC 5 s delay
+  if(m.barcPowered){
+    if(S.lfOut !== S.lfLight){ S.lfTimer += dt; if(S.lfTimer >= 5){ S.lfLight = S.lfOut; S.lfTimer=0; if(S.lfLight){ S.toneT = 1.2; log("LOW FUEL light ON (short tone)"); } else log("LOW FUEL light OFF"); } }
+    else S.lfTimer = 0;
+  }
+  if(S.toneT>0) S.toneT -= dt; if(S.msgT>0) S.msgT -= dt;
+  render();
+}
+
+/* ============================================================
+   SCHEMATIC
+   ============================================================ */
+const svg = document.getElementById('schem');
+function el(tagN, attrs, parent){ const e=document.createElementNS("http://www.w3.org/2000/svg",tagN); for(const k in attrs) e.setAttribute(k,attrs[k]); (parent||svg).appendChild(e); return e; }
+function txt(x,y,s,cls,parent,anchor){ const t=el('text',{x,y,class:cls||'', 'text-anchor':anchor||'middle'},parent); t.textContent=s; return t; }
+function comp(id){ const g=el('g',{class:'comp',id:'c-'+id}); g.addEventListener('click',()=>{select(id)}); return g; }
+
+const KEY = [
+  ['tank','Fuel tank'],['vent','Vent / rollover'],['cap','Filler cap'],['probe','Gauge probe'],['board','Gauge board'],
+  ['float','Low fuel float'],['pump','Boost pump'],['screen','Pump screen'],['mdrain','Manifold drain'],['valve','Shut-off valve'],
+  ['gasc','Gascolator'],['flow','Flow sender'],['epump','Engine pump'],['psens','Pressure sender'],['carb','Carburettor'],
+  ['bus','Bus bar'],['b7','Breaker B7 5 A'],['pumpsw','PUMP switch'],['cfuel','C-FUEL connector'],['barc','BARC'],
+  ['lflight','LOW FUEL light'],['epm','EPM'],['mgp','MGP ground']
+];
+const KEYNUM = {}; KEY.forEach((k,i)=>KEYNUM[k[0]]=i+1);
+function badge(id,x,y){ const g=el('g',{class:'comp badge'}); g.addEventListener('click',()=>select(id));
+  el('circle',{cx:x,cy:y,r:8.5,fill:'#2b4c7e'},g); const t=txt(x,y+4,String(KEYNUM[id]),'',g); t.style.fill='#fff'; t.style.fontSize='10.5px'; t.style.fontWeight='700'; }
+
+function buildSchematic(){
+  // zones
+  el('rect',{x:8,y:8,width:984,height:330,rx:10,fill:'#f7f9fc',stroke:'#e1e6ee'});
+  txt(980,26,'FUEL CIRCUIT','small',null,'end');
+  el('rect',{x:8,y:350,width:984,height:282,rx:10,fill:'#fbfaf6',stroke:'#ece6d8'});
+  txt(20,624,'ELECTRICAL — per MM 71-C-20 / 71-C-01','small',null,'start');
+
+  // pipes
+  el('path',{id:'p1',class:'pipe',d:'M228 294 L228 322 L320 322 L320 250'});
+  el('path',{id:'p2',class:'pipe',d:'M320 210 L320 170 L420 170'});
+  el('path',{id:'p3',class:'pipe',d:'M470 170 L560 170'});
+  el('path',{id:'p4',class:'pipe',d:'M600 170 L690 170'});
+  el('path',{id:'p5',class:'pipe',d:'M750 170 L870 170'});
+
+  // tank
+  let g=comp('tank');
+  el('rect',{x:60,y:60,width:200,height:250,rx:8,fill:'#fff',stroke:'#7a8699','stroke-width':2},g);
+  el('rect',{id:'fuelLevel',x:62,y:200,width:196,height:108,fill:'#cfe2fb'},g);
+  txt(160,84,'FUEL TANK (bladder)','',g); txt(160,100,'170 L max','small',g);
+  g=comp('vent'); el('path',{class:'body',d:'M80 60 L80 40 Q80 28 92 28 L110 28',fill:'none',stroke:'#7a8699','stroke-width':3},g);
+  el('rect',{x:70,y:44,width:20,height:12,fill:'#e6ecf5',stroke:'#7a8699'},g);
+  g=comp('cap'); el('rect',{x:200,y:48,width:34,height:12,rx:3,fill:'#e6ecf5',stroke:'#7a8699'},g);
+  // manifold
+  el('rect',{x:68,y:226,width:184,height:80,rx:6,fill:'none',stroke:'#9aa6b8','stroke-dasharray':'4 3'});
+  txt(102,220,'Fuel manifold','small',null,'start');
+  g=comp('probe'); el('rect',{x:84,y:112,width:10,height:120,rx:3,fill:'#c3ccd8',stroke:'#5c6778'},g);
+  g=comp('board'); el('rect',{x:74,y:232,width:52,height:24,rx:3,fill:'#e9f3e6',stroke:'#4d7a45'},g);
+  g=comp('float'); el('rect',{id:'floatBody',x:150,y:262,width:34,height:16,rx:8,fill:'#ffe7b8',stroke:'#9a6a12'},g);
+  g=comp('pump'); el('circle',{id:'pumpCirc',cx:228,cy:280,r:14,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g); txt(228,284,'P','',g);
+  g=comp('screen'); el('rect',{x:204,y:296,width:12,height:8,fill:'#d7dde6',stroke:'#5c6778'},g);
+  g=comp('mdrain'); el('path',{class:'body',d:'M135 306 L135 322 M129 322 L141 322',stroke:'#5c6778','stroke-width':2.5},g);
+  // valve
+  g=comp('valve'); el('circle',{cx:320,cy:230,r:20,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g);
+  el('path',{id:'valveHandle',d:'M320 214 L320 246',stroke:'#2b4c7e','stroke-width':5,'stroke-linecap':'round'},g);
+  txt(348,234,'Shut-off','small',g,'start'); txt(348,247,'valve','small',g,'start');
+  // gascolator
+  g=comp('gasc'); el('path',{class:'body',d:'M420 158 L470 158 L466 196 Q445 212 424 196 Z',fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g);
+  el('path',{d:'M445 206 L445 222 M439 222 L451 222',stroke:'#5c6778','stroke-width':2.5},g);
+  txt(445,146,'Gascolator','small',g);
+  // flow sender
+  g=comp('flow'); el('circle',{cx:580,cy:170,r:18,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g);
+  el('path',{d:'M568 158 L592 182 M592 158 L568 182',stroke:'#2b4c7e','stroke-width':2},g); txt(580,144,'Flow sender','small',g);
+  // engine pump + engine
+  g=comp('epump'); el('rect',{x:690,y:148,width:60,height:44,rx:6,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g);
+  txt(720,166,'Engine','',g); txt(720,181,'pump','',g);
+  el('rect',{id:'engineBox',x:660,y:60,width:150,height:60,rx:8,fill:'#eef1f5',stroke:'#9aa6b8'});
+  txt(735,86,'ENGINE  O-360-J2A',''); el('text',{id:'engTxt',x:735,y:104,'text-anchor':'middle',class:'small'}).textContent='';
+  // pressure sender
+  g=comp('psens'); el('path',{d:'M810 170 L810 214',stroke:'#2b4c7e','stroke-width':3},g);
+  el('circle',{cx:810,cy:226,r:13,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g); txt(810,230,'S','',g); txt(810,256,'Pressure sender','small',g);
+  // carb
+  g=comp('carb'); el('rect',{x:870,y:150,width:90,height:40,rx:6,fill:'#fff',stroke:'#2b4c7e','stroke-width':2},g); txt(915,175,'Carburettor','',g);
+
+  // ---------- electrical ----------
+  // manifold-side wires (no crossings): pump → pin1, float → pin2, board → pin4 (signal bundle)
+  el('path',{id:'wPumpM',class:'wire',d:'M330 460 L300 460 L300 332 L196 332 L196 280 L214 280'});
+  el('path',{id:'wP2m',class:'wire',d:'M330 482 L290 482 L290 342 L167 342 L167 278'});
+  el('path',{id:'wBoard',class:'wire',d:'M330 526 L280 526 L280 352 L100 352 L100 256'});
+  // bus, B7, pump switch (aircraft side)
+  g=comp('bus'); el('rect',{x:460,y:404,width:40,height:32,rx:3,fill:'#555'},g); const bt=txt(480,424,'BUS','',g); bt.style.fill='#fff'; bt.style.fontSize='11px';
+  el('text',{id:'busTxt',x:452,y:428,'text-anchor':'end',class:'small'});
+  el('path',{id:'wB7',class:'wire',d:'M500 420 L520 420'});
+  g=comp('b7'); el('rect',{x:520,y:408,width:40,height:24,rx:5,fill:'#fff',stroke:'#555','stroke-width':2},g); txt(540,424,'B7','',g);
+  el('path',{id:'wB7other',class:'wire',d:'M548 408 L548 384 L560 384','stroke-dasharray':'4 3'});
+  txt(564,388,'→ clutch release, carb heating','small',null,'start');
+  el('path',{id:'wSw',class:'wire',d:'M560 420 L580 420'});
+  g=comp('pumpsw'); el('rect',{x:580,y:408,width:50,height:24,rx:5,fill:'#fff',stroke:'#555','stroke-width':2},g); el('text',{id:'pumpswTxt',x:605,y:424,'text-anchor':'middle'},g);
+  el('path',{id:'wP1',class:'wire',d:'M605 432 L605 448 L455 448 L455 460 L440 460'});
+  // C-FUEL connector
+  g=comp('cfuel'); el('rect',{x:320,y:440,width:120,height:150,rx:6,fill:'#fff',stroke:'#333','stroke-width':2},g);
+  txt(380,606,'C-FUEL connector','',g);
+  const pins=[['1','PUMP'],['2','BARC_LF'],['3','OUT'],['4','TEST'],['5','+14V'],['6','GND']];
+  pins.forEach((p,i)=>{ const y=460+i*22; el('rect',{x:330,y:y-9,width:18,height:16,fill:'#f1f3f6',stroke:'#333'},g); txt(339,y+3,p[0],'small',g); txt(356,y+3,p[1],'small',g,'start'); });
+  el('text',{id:'cfuelState',x:380,y:622,'text-anchor':'middle',class:'small'},g);
+  // aircraft-side wires
+  el('path',{id:'wP2',class:'wire',d:'M440 482 L640 482'});
+  el('path',{id:'wP3',class:'wire',d:'M440 504 L600 504 L600 560 L640 560'});
+  el('path',{id:'wP4',class:'wire',d:'M440 526 L620 526 L620 494 L640 494'});
+  el('path',{id:'wP5',class:'wire',d:'M440 548 L590 548 L590 574 L640 574'});
+  el('path',{id:'wP6',class:'wire',d:'M440 570 L470 570 L470 610'});
+  g=comp('mgp'); el('path',{class:'body',d:'M458 610 L482 610 M462 616 L478 616 M467 622 L473 622',stroke:'#333','stroke-width':2},g); txt(492,618,'MGP gnd','small',g,'start');
+  // BARC, lamp, EPM
+  g=comp('barc'); el('rect',{x:640,y:462,width:160,height:44,rx:6,fill:'#fff',stroke:'#333','stroke-width':2},g);
+  txt(720,480,'BARC','',g); txt(720,497,'4 Low fuel · 24 Test','small',g);
+  g=comp('lflight'); el('circle',{id:'schemLF',cx:656,cy:523,r:8,fill:'#555',stroke:'#222'},g); txt(670,527,'LOW FUEL light','small',g,'start');
+  g=comp('epm'); el('rect',{x:640,y:540,width:160,height:50,rx:6,fill:'#10151c',stroke:'#333','stroke-width':2},g);
+  const t1=txt(720,560,'EPM','',g); t1.style.fill='#d8ffe6'; const t2=txt(720,578,'gauge in: pin 25-25','small',g); t2.style.fill='#9fb0c4';
+  el('path',{id:'wFS',class:'wire',d:'M580 188 L580 300 L860 300 L860 560 L800 560','stroke-dasharray':'5 4'});
+  el('path',{id:'wPS',class:'wire',d:'M823 226 L880 226 L880 574 L800 574','stroke-dasharray':'5 4'});
+  txt(888,274,'flow & pressure','small',null,'start'); txt(888,286,'sensor lines','small',null,'start'); txt(888,298,'(see 71-B)','small',null,'start');
+
+  // in-diagram key (numbers + names)
+  txt(24,378,'KEY  (click for details)','small',null,'start');
+  KEY.forEach((k,i)=>{ const col=i<12?0:1, row=i<12?i:i-12; const x=col?146:26, y=398+row*17;
+    const g2=el('g',{class:'comp'}); g2.addEventListener('click',()=>select(k[0]));
+    el('circle',{cx:x,cy:y-4,r:7,fill:'#2b4c7e'},g2); const n=txt(x,y,String(i+1),'',g2); n.style.fill='#fff'; n.style.fontSize='9.5px'; n.style.fontWeight='700';
+    txt(x+12,y,k[1],'small',g2,'start'); });
+
+  // numbered badges on components
+  [['tank',74,74],['vent',58,50],['cap',190,44],['probe',106,124],['board',138,244],['float',198,270],['pump',228,254],
+   ['screen',210,318],['mdrain',152,322],['valve',346,210],['gasc',484,190],['flow',606,192],['epump',720,208],
+   ['psens',834,212],['carb',972,170],['bus',480,392],['b7',524,396],['pumpsw',644,420],['cfuel',312,434],
+   ['barc',814,472],['lflight',780,523],['epm',814,548],['mgp',448,620]].forEach(b=>badge(b[0],b[1],b[2]));
+
+  // pipe overlays for animation
+  ['p1','p2','p3','p4','p5'].forEach(id=>{ const base=document.getElementById(id); const o=el('path',{id:id+'f',class:'pipe',d:base.getAttribute('d'),stroke:'#ffffff',opacity:0}); o.style.strokeWidth=3; });
+}
+
+function setWire(id,on){ const w=document.getElementById(id); if(w) w.setAttribute('stroke', on?'var(--elec)':'var(--elec-dim)'); }
+function setPipe(id,state){ // state: 0 empty/no press, 1 fuel no flow, 2 flowing
+  const p=document.getElementById(id), o=document.getElementById(id+'f');
+  p.setAttribute('stroke', state>0 ? (state===2?'var(--fuel)':'#8db7ea') : 'var(--fuel-dim)');
+  o.setAttribute('opacity', state===2?0.8:0); o.classList.toggle('flowing', state===2);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  const m=model();
+  // switches
+  const sw=(id,on,txtOn,txtOff)=>{const e=document.getElementById(id); e.classList.toggle('on',on); e.classList.toggle('off',!on); e.querySelector('.pos').textContent=on?txtOn:txtOff;};
+  sw('swMaster',S.master,'ON','OFF'); sw('swPump',S.pumpSw,'ON','OFF'); sw('swBarc',S.barc==="BACKUP",'BACKUP','MAIN'); sw('swValve',S.valveOn,'ON (open)','OFF');
+  const cb=document.getElementById('cbB7'); cb.classList.toggle('popped',!S.b7In); cb.classList.toggle('on',S.b7In); cb.querySelector('.pos').textContent=S.b7In?'IN':'POPPED';
+  
+  // lights
+  let lf = S.lfLight && m.barcPowered;
+  // BARC start-up test: lights at power-up incl. LOW FUEL after a delay (approximate)
+  if(S.barcBootT>=1.5 && S.barcBootT<3.5) lf = true;
+  document.getElementById('ltLowFuel').classList.toggle('lit',lf);
+  document.getElementById('ltBarcGreen').classList.toggle('lit',S.barc==="BACKUP");
+  document.getElementById('tone').textContent = S.msgT>0 ? S.msg : S.toneT>0 ? '♪ short tone (LOW FUEL)' : (S.barcBootT>=0 && S.barcBootT<3.5 ? 'BARC light/horn test…' : '');
+  document.getElementById('schemLF').setAttribute('fill', lf?'var(--amber)':'#555');
+  // EPM
+  const epm=document.getElementById('epm'), ov=document.getElementById('epmOverlay');
+  epm.classList.toggle('offscreen',!m.epm);
+  const q=document.getElementById('epmQty'), fp=document.getElementById('epmFp'), fl=document.getElementById('epmFlow'), en=document.getElementById('epmEng'), al=document.getElementById('epmAlarm');
+  if(!m.epm){ q.textContent='';fp.textContent='';fl.textContent='';en.textContent='';al.textContent='';document.getElementById('epmBar').style.width='0';ov.classList.add('hidden'); document.getElementById('epmFlowK').textContent='FLOW MODE'; }
+  else{
+    q.textContent = m.qty===null ? 'XXX' : m.qty; q.className='v'+(m.qty===null?' amber':(m.qtyRed?' red':''));
+    document.getElementById('epmBar').style.width = m.qty===null?'0':Math.min(100,m.qty/170*100)+'%';
+    fp.textContent = {LOW:'< 0.03',RISE:'≥ 0.20',GREEN:'GREEN'}[m.fpBand]; fp.className='v'+(m.fpAlarm?' red':''); fp.style.fontSize = m.fpBand==='GREEN'?'16px':'';
+    en.textContent = S.engine;
+    // flow modes RFM 7-15
+    let mode = S.flowMode; if(m.qty!==null && m.qty<10) mode=1;
+    const names=['REM TIME','INST FLOW','AVG FLOW']; document.getElementById('epmFlowK').textContent=names[mode];
+    fl.textContent = 'n/s';
+    const alarms=[]; if(m.fpAlarm) alarms.push('FUEL P'); if(m.qtyRed) alarms.push('LOW FUEL'); if(m.qty===null) alarms.push('FUEL QTY XXX');
+    al.textContent = alarms.length? '⚠ '+alarms.join(' · ') : '';
+    // self-test overlay
+    const showTest = (S.epmBootT>=0 && S.epmBootT<4) || S.epmTestManual;
+    if(showTest){
+      const okFQ = m.gaugeValid;
+      ov.innerHTML = `<b>SENSORS TEST</b><br><br>FUEL QTY ……… ${okFQ?'<span style="color:#7ee2a8">OK</span>':'<span style="color:#ffc04a">FAILED</span>'}<br>FUEL P ……… <span style="color:#7ee2a8">OK</span><br>FUEL FLOW …… <span style="color:#7ee2a8">OK</span><br><br><span style="color:#7f8ea3">Fuel-related lines only (this module). Amber FAILED = line/sensor failure (RFM 7-13).</span>${S.epmTestManual?'<br><button id="closeTest">Close</button>':''}`;
+      ov.classList.remove('hidden');
+      const c=document.getElementById('closeTest'); if(c) c.onclick=()=>{S.epmTestManual=false;render();};
+    } else ov.classList.add('hidden');
+  }
+  // schematic
+  document.getElementById('fuelLevel').setAttribute('y', 308 - S.fuel/170*240);
+  document.getElementById('fuelLevel').setAttribute('height', S.fuel/170*240);
+  document.getElementById('fuelVal').textContent = S.fuel.toFixed(1);
+  document.getElementById('fuelSlider').value = S.fuel;
+  document.getElementById('valveHandle').setAttribute('d', S.valveOn?'M320 214 L320 246':'M304 230 L336 230');
+  document.getElementById('pumpCirc').setAttribute('fill', m.pumpRun?'#d6f5e0':(m.pin1>0?'#ffd9d9':'#fff'));
+  document.getElementById('floatBody').setAttribute('fill', S.lfOut?'#ffc56b':'#ffe7b8');
+  const flowing = m.path && (m.pumpRun || S.engine==="RUNNING");
+  const upstreamPress = m.usable && (m.pumpRun);
+  setPipe('p1', m.usable ? (m.pumpRun ? 2 : 1) : 0);
+  ['p2','p3','p4'].forEach(id=>setPipe(id, m.path ? (flowing?2:1) : 0));
+  setPipe('p5', m.path ? (flowing?2:1) : 0);
+  document.getElementById('engineBox').setAttribute('fill', S.engine==="RUNNING"?'#e2f6e9':'#eef1f5');
+  document.getElementById('engTxt').textContent = S.engine==="RUNNING" ? 'RUNNING' + (S.starveT>0?' — starving!':'') : 'OFF';
+  document.getElementById('busTxt').textContent = m.bus ? m.busV.toFixed(1)+' V' : '0 V';
+  setWire('wB7', m.bus); setWire('wSw', m.bus && m.b7); setWire('wB7other', m.bus && m.b7);
+  setWire('wP1', m.pin1>0); setWire('wPumpM', m.pin1>0 && m.connected);
+  document.getElementById('pumpswTxt').textContent = S.pumpSw?'ON':'OFF';
+  setWire('wP2', m.barcPowered); setWire('wP2m', m.barcPowered && m.connected);
+  setWire('wP3', m.gaugeValid); setWire('wP4', m.barcPowered);
+  setWire('wP5', m.pin5>0); setWire('wBoard', m.boardPowered); setWire('wP6', true);
+  setWire('wFS', m.epm); setWire('wPS', m.epm);
+  document.getElementById('cfuelState').textContent = {connected:'Connected',disconnected:'DISCONNECTED',tester:'Tester G87-05-100 inserted'}[S.cfuel];
+  document.getElementById('b7note').textContent = S.b7In ? '' : 'B7 out: fuel pump, clutch (release) and carb heating unpowered (RFM 7).';
+  document.getElementById('btnStart').disabled = S.engine==="RUNNING";
+  document.getElementById('btnStop').disabled = S.engine!=="RUNNING";
+  renderMeasLive(m);
+}
+
+/* ============================================================
+   INFO PANEL
+   ============================================================ */
+function select(id){
+  S.sel=id; document.querySelectorAll('svg .comp').forEach(g=>g.classList.toggle('sel', g.id==='c-'+id));
+  const c=COMP[id];
+  document.getElementById('p-info').innerHTML = `
+   <div class="two"><div>
+    <h3 style="margin:0 0 4px">${c.name} ${tag(c.t)}</h3>
+    <p>${c.fn}</p>
+    <table><tr><th>P/N (IPC Rev D)</th><td>${c.pn}</td></tr><tr><th>IPC reference</th><td>${c.ipc}</td></tr>
+    <tr><th>MM tasks</th><td>${c.mm.join('<br>')}</td></tr></table>
+    <p class="src">P/N listed is the latest orderable/SB variant in IPC Rev D. Check effectivity against the aircraft configuration form and applied SBs.</p>
+   </div><div>
+    <h3 style="margin:0 0 4px">Sources</h3><ul>${c.src.map(s=>`<li class="src">${SRC[s]}</li>`).join('')}</ul>
+   </div></div>`;
+  activateTab('info');
+}
+
+/* ============================================================
+   MEASUREMENTS & INSPECTION
+   ============================================================ */
+function buildMeas(){
+  document.getElementById('p-meas').innerHTML = `
+  <div class="two">
+   <div>
+    <h3 style="margin-top:0">Multimeter at C-FUEL ${tag('V')}</h3>
+    <p class="src">Procedure basis: MM 55-A-14 (steps 1–8) and wiring 71-C-20. Pin numbers per 71-C-20.</p>
+    <div class="row">
+      <label>Connector: <select id="cfSel"><option value="connected">Connected (normal)</option><option value="disconnected">Disconnected (step 1)</option><option value="tester">Tester G87-05-100 inserted (step 4)</option></select></label>
+    </div>
+    <div class="row">
+      <label>Measurement: <select id="mSel">
+        <option value="v56">DC volts — pin 5 (+) to pin 6 (GND), harness side</option>
+        <option value="f36">Frequency — wire 3 to wire 6 (via tester)</option>
+      </select></label>
+    </div>
+    <div class="meas" id="measOut">—</div>
+    <div class="src" id="measNote" style="margin-top:6px"></div>
+    <h3>Reference values (MM 55-A-14)</h3>
+    <table>
+      <tr><th>Check</th><th>Expected</th><th>If not</th></tr>
+      <tr><td>Pin 5–6, master ON, engine not running</td><td>≈ 12 V</td><td>0 V → check wiring EPM ↔ C-FUEL</td></tr>
+      <tr><td>Wire 3–6 frequency (tester inserted)</td><td>3.8–7.5 kHz (step 6) → check wiring EPM ↔ C-FUEL</td><td>≈ 20 kHz → probe disconnected from board<br>none → probe shorted or board defective</td></tr>
+    </table>
+   </div>
+   <div>
+    <h3 style="margin-top:0">Inspection actions</h3>
+    <div class="row"><button class="btn sec" id="iManifold">Remove manifold &amp; inspect (MM 55-A-10)</button></div>
+    <div class="row"><button class="btn sec" id="iIso">Check probe tube isolation (55-A-14 step 10)</button></div>
+    <div class="row"><button class="btn sec" id="iCal">Gauge calibration check (MM 55-A-04)</button></div>
+    <div class="row"><button class="btn sec" id="iBreaker">Inspect breaker panel</button> <button class="btn sec" id="iValve">Check fuel valve position</button></div>
+    <div id="inspOut"></div>
+   </div>
+  </div>`;
+  document.getElementById('cfSel').onchange=e=>{S.cfuel=e.target.value; log('C-FUEL: '+e.target.selectedOptions[0].text); render();};
+  document.getElementById('mSel').onchange=e=>{S.meter=e.target.value; log('Meter set: '+e.target.selectedOptions[0].text); render();};
+  const out = h => document.getElementById('inspOut').innerHTML = h;
+  document.getElementById('iManifold').onclick=()=>{
+    if(S.master){ out(`<div class="callout bad">Switch MASTER OFF before removing the manifold.</div>`); return; }
+    log('Manifold removed for inspection (55-A-10)');
+    const inv=S.faults.has('floatInv'), disc=S.faults.has('probeDisc');
+    out(`<div class="callout">Manifold removed (MM 55-A-10: drain tank, drain non-usable via manifold drain, disconnect, remove six bolts).<br>
+    • Low fuel float: <b>${inv?'‘NC’ engraving facing DOWN — float upside down':'‘NC’ up / ‘NO’ down — correct'}</b><br>
+    • Probe-to-board wiring: <b>${disc?'probe wire DISCONNECTED at board':'connected'}</b><br>
+    • Probe visual: ${S.faults.has('probeShort')?'<b>liquid / foreign material in probe notches</b>':'clean'}<br>
+    <span class="src">Re-install per 55-A-11 (torque 6 Nm star pattern; outlet fitting 14 Nm; lock wire).</span></div>`);
+  };
+  document.getElementById('iIso').onclick=()=>{ log('Probe isolation check'); out(`<div class="callout">Coaxial tubes isolation: <b>${S.faults.has('probeShort')?'NOT isolated (shorted)':'well isolated'}</b><div class="src">MM 55-A-14 step 10: the two coaxial tubes must be well isolated electrically.</div></div>`); };
+  document.getElementById('iBreaker').onclick=()=>{ log('Breaker panel inspected'); out(`<div class="callout">B7 (5 A Pump – Clutch – Carb. heating): <b>${S.b7In?'IN':'POPPED'}</b></div>`); };
+  document.getElementById('iValve').onclick=()=>{ log('Fuel valve checked'); out(`<div class="callout">Fuel shut-off valve (cabin bulkhead): <b>${S.valveOn?'ON / open':'OFF / closed'}</b></div>`); };
+  document.getElementById('iCal').onclick=()=>{
+    log('Gauge calibration check (55-A-04)');
+    if(!S.master){ out(`<div class="callout bad">MASTER must be ON to read the EPM during calibration (55-A-04).</div>`); return; }
+    const rows=[[20,16,19],[15,11,14],[10,6,9],[5,0,4],[0,0,0]];
+    const m=model(); const valid = m.boardSignal && !S.faults.has('pin3Open');
+    let html=`<div class="callout"><b>MM 55-A-04 table</b> (AVGAS; quantities above non-usable; gauge calibrated at 20 L to read 19 L)<table><tr><th>Quantity</th><th>EPM reading</th><th>Criteria</th><th>Result</th></tr>`;
+    let pass=true;
+    rows.forEach(([q,lo,hi])=>{ let r = !valid?'XXX':Math.round(Math.max(0,q-1.5)); const ok = r!=='XXX' && r>=lo && r<=hi; if(!ok) pass=false;
+      html+=`<tr><td>${q} L</td><td>${r}</td><td>${q===0?'= 0':lo+' to '+hi}</td><td>${ok?'✔':'✘'}</td></tr>`; });
+    html+=`</table>${pass?'<b>Within acceptance criteria.</b>':'<b>Not within criteria.</b> Re-adjust condenser (step 9).'} </div>`;
+    out(html);
+  };
+}
+function renderMeasLive(m){
+  const o=document.getElementById('measOut'); if(!o) return;
+  document.getElementById('cfSel').value=S.cfuel; document.getElementById('mSel').value=S.meter;
+  const note=document.getElementById('measNote'); note.innerHTML='';
+  if(S.cfuel==="connected"){ o.textContent='— pins not accessible'; note.textContent='Disconnect C-FUEL or insert the tester (55-A-14 steps 1, 4).'; return; }
+  if(S.meter==="v56"){ o.textContent=(m.pin5).toFixed(1)+' V DC'; if(S.engine==="RUNNING") note.textContent='MM reference value is given with engine not running.'; }
+  else { if(S.cfuel!=="tester"){ o.textContent='— no signal source'; note.textContent='Insert the tester as an extension so the board stays connected (step 4).'; return; }
+    o.textContent = {NONE:'no frequency','20K':'≈ 20 kHz',BAND:'within 3.8–7.5 kHz'}[m.freq];
+    note.textContent='Readings as described in MM 55-A-14 steps 6–8.'; }
+}
+
+/* ============================================================
+   SCENARIOS
+   ============================================================ */
+const SCEN = [
+  {id:'xxx', title:'EPM fuel quantity shows XXX',
+   brief:'After maintenance, the pilot reports that the EPM fuel quantity displays XXX and the sensor test page shows FAILED for fuel quantity. Fuel on board ≈ 60 L.',
+   pool:['probeDisc','probeShort','boardFail','pin3Open','pin5Lost'],
+   setup:()=>{S.fuel=60;},
+   hint:'Follow MM 55-A-14: disconnect C-FUEL, measure pin 5–6 voltage; insert tester, measure frequency 3–6.'},
+  {id:'nofp', title:'No fuel pressure rise when PUMP is switched ON',
+   brief:'During the post-maintenance ground run (MM H-1 step 21) the mechanic switches the fuel pump ON: FUEL P does not rise (expected ≥ 0.2 bar). The engine is not running.',
+   pool:['b7Pop','valveOff'],
+   setup:()=>{S.fuel=80;},
+   hint:'RFM 7: B7 feeds the fuel pump. MM Section F: check that the fuel shut-off valve is open.'},
+  {id:'lfinv', title:'LOW FUEL light ON with a full tank',
+   brief:'After a fuel manifold re-installation, the LOW FUEL light comes ON with ≈ 150 L in the tank and goes OFF when the tank is almost empty.',
+   pool:['floatInv'],
+   setup:()=>{S.fuel=150;},
+   hint:'MM 55-A-03 describes this exact symptom.'}
+];
+function buildScen(){
+  const p=document.getElementById('p-scen');
+  if(!S.scenario){
+    p.innerHTML = `<p>Choose a scenario. A fault is injected without telling you which. Investigate with the cockpit, schematic and <b>Measurements &amp; inspection</b> tab, then submit your diagnosis.</p>`+
+      SCEN.map(s=>`<div class="callout"><b>${s.title}</b><br><span class="src">${s.brief}</span><br><button class="btn" data-s="${s.id}" style="margin-top:6px">Start</button></div>`).join('');
+    p.querySelectorAll('button[data-s]').forEach(b=>b.onclick=()=>startScen(b.dataset.s));
+    return;
+  }
+  const sc=S.scenario;
+  const opts = sc.def.pool.concat(sc.def.id==='xxx'?['floatInv']:sc.def.id==='nofp'?['probeDisc']:['probeDisc','b7Pop']);
+  const uniq=[...new Set(opts)].sort(()=>Math.random()-0.5);
+  p.innerHTML = `<h3 style="margin-top:0">${sc.def.title}</h3><p>${sc.def.brief}</p>
+    <details><summary>Hint</summary><p class="src">${sc.def.hint}</p></details>
+    <p><b>Your diagnosis:</b></p>${uniq.map(f=>`<label class="opt"><input type="radio" name="dg" value="${f}"> ${FAULTS[f].name}</label>`).join('')}
+    <div class="row" style="margin-top:8px"><button class="btn" id="submitDg">Submit diagnosis</button> <button class="btn sec" id="abandon">Abandon scenario</button></div><div id="dgOut"></div>`;
+  document.getElementById('abandon').onclick=()=>{ S.faults.clear(); S.scenario=null; log('Scenario abandoned'); resetAircraft(); buildScen(); };
+  document.getElementById('submitDg').onclick=()=>{
+    const v=(p.querySelector('input[name=dg]:checked')||{}).value; if(!v) return;
+    const ok = v===sc.fault; const f=FAULTS[sc.fault];
+    const steps = S.actions.slice(sc.startIdx);
+    log('Diagnosis submitted: '+FAULTS[v].name+(ok?' — CORRECT':' — incorrect'));
+    document.getElementById('dgOut').innerHTML = `<div class="callout ${ok?'good':'bad'}"><b>${ok?'Correct.':'Not correct.'}</b> Injected fault: <b>${f.name}</b> ${tag(f.t)}<br>
+      <b>Rectification:</b> ${f.rect}<br><span class="src">Sources: ${f.src.map(s=>SRC[s]).join(' · ')}</span>
+      <p style="margin:8px 0 2px"><b>Your actions (${steps.length}):</b></p><div class="log" style="max-height:140px">${steps.map(s=>'• '+s).join('<br>')||'none'}</div>
+      ${ok?'<button class="btn" id="rectify" style="margin-top:8px">Apply rectification &amp; verify</button>':''}</div>`;
+    const r=document.getElementById('rectify'); if(r) r.onclick=()=>{ applyRectify(sc.fault); S.scenario=null; log('Rectification applied — verify system operation'); buildScen(); };
+  };
+}
+function startScen(id){
+  const def=SCEN.find(s=>s.id===id); resetAircraft(); S.faults.clear();
+  const fault=def.pool[Math.floor(Math.random()*def.pool.length)];
+  def.setup(); applyFault(fault);
+  S.scenario={def,fault,startIdx:S.actions.length};
+  log('Scenario started: '+def.title); buildScen(); render();
+}
+function applyFault(f){ S.faults.add(f); if(f==='b7Pop') S.b7In=false; if(f==='valveOff') S.valveOn=false; }
+function applyRectify(f){ S.faults.delete(f); if(f==='b7Pop') S.b7In=true; if(f==='valveOff') S.valveOn=true; render(); }
+function resetAircraft(){ Object.assign(S,{master:false,pumpSw:false,barc:"MAIN",valveOn:true,b7In:true,engine:"OFF",starveT:0,runT:0,cfuel:"connected",lfTimer:0,lfLight:false,epmTestManual:false}); }
+
+/* ============================================================
+   INSTRUCTOR
+   ============================================================ */
+function buildInstr(){
+  const p=document.getElementById('p-instr');
+  p.innerHTML = `<p>Inject or clear faults directly (visible to anyone at this screen — use for classroom demonstration).</p>
+   <table><tr><th>Inject</th><th>Fault</th><th>Source</th><th>Rectification</th></tr>
+   ${Object.entries(FAULTS).map(([k,f])=>`<tr><td><input type="checkbox" data-f="${k}" ${S.faults.has(k)?'checked':''}></td><td>${f.name}</td><td>${tag(f.t)}<div class="src">${f.src.map(s=>SRC[s]).join('<br>')}</div></td><td class="src">${f.rect}</td></tr>`).join('')}
+   </table><div class="row" style="margin-top:8px"><button class="btn sec" id="clrF">Clear all faults &amp; reset aircraft</button></div>`;
+  p.querySelectorAll('input[data-f]').forEach(c=>c.onchange=()=>{ const f=c.dataset.f; if(c.checked){applyFault(f);log('Instructor injected: '+FAULTS[f].name);} else {applyRectify(f);log('Instructor cleared: '+FAULTS[f].name);} render(); });
+  document.getElementById('clrF').onclick=()=>{ S.faults.clear(); S.scenario=null; resetAircraft(); S.fuel=60; log('All faults cleared, aircraft reset'); buildInstr(); buildScen(); render(); };
+}
+
+/* ============================================================
+   SOURCES & OPEN QUESTIONS
+   ============================================================ */
+function buildSrc(){
+  const rules = [
+    ['Boost pump supply: bus → B7 (5 A) → PUMP switch → C-FUEL pin 1',['MM_71C20','MM_71C01']],
+    ['B7 also feeds clutch (release) and carburettor heating',['RFM_7_7','MM_71C01']],
+    ['Flow path: tank/boost pump → shut-off valve → gascolator → flow sender → engine pump → carburettor; pressure sender after engine pump',['RFM_7_6','MM_E5_3']],
+    ['Pump ON, engine not running → fuel pressure increase ≥ 0.2 bar',['MM_H1']],
+    ['Engine running, pump OFF → fuel pressure remains in the green arc',['MM_H1']],
+    ['FUEL P red arc < 0.03 bar (and > 0.55 bar); FUEL P alarm normal before engine start',['RFM_3_EPM','RFM_2_5','RFM_4_9']],
+    ['Start sequence: fuel pump ON, check fuel pressure increase; no start → check fuel valve open and fuel pressure',['RFM_4_11','MM_F']],
+    ['Fuel valve OFF → engine quits (engine fire procedure)',['RFM_3_FIRE']],
+    ['Low fuel float independent of gauge; ON 14–16 L (draining), OFF 15–17 L (filling)',['MM_55A03']],
+    ['BARC: 5-s delay, test at start-up (low fuel comes with a delay), short tone when LOW FUEL lights',['MM_55A03','MM_H1','RFM_3_AUR','RFM_7_17']],
+    ['BARC backup: powered direct from battery, central green light active; LOW FUEL still operative with MASTER OFF',['RFM_7_17']],
+    ['EPM fuel quantity = gauge value minus 1.5 L for sloshing',['MM_55A04']],
+    ['EPM LOW FUEL red at 10 L; fuel flow display switches to instantaneous below 10 L',['RFM_3_EPM','RFM_7_15']],
+    ['Invalid gauge signal → XXX and FAILED on sensor test page',['MM_55A14','RFM_7_13']],
+    ['C-FUEL pin 5–6 ≈ 12 V (master ON, engine off); 0 V → check wiring EPM ↔ C-FUEL',['MM_55A14']],
+    ['Frequency wire 3–6: 3.8–7.5 kHz → check wiring EPM ↔ C-FUEL; ≈ 20 kHz → probe disconnected; none → probe shorted or board defective',['MM_55A14']],
+    ['XXX displayed above 179 L',['RFM_4_15']],
+  ];
+  const notSim = [
+    'Fuel flow values (remaining time, instantaneous and average flow) — no flow data in the sources; shown as n/s.',
+    'Exact fuel pressure values — sources give only bands (≥ 0.2 bar rise, green arc, red < 0.03 / > 0.55 bar), so the EPM shows the band.',
+    'Fuel consumption over time — fuel quantity is set manually with the slider.',
+    'Timing of BARC test sequence and of engine stopping after fuel valve OFF — not specified in sources.',
+    'Battery state of charge, alternator, other electrical loads (next module).',
+  ];
+  const oq = [
+    ['Fuel pressure minimum','RFM Sect.2 p.2-5 gives minimum 0.02 bar (0.3 psi); RFM Sect.3 EPM table gives red arc < 0.03 bar (0.5 psi). Simulator shows the EPM alarm per Sect.3 (< 0.03 bar).'],
+    ['LOW FUEL threshold','RFM says “about 12 L” / “less than 12 L”; MM 55-A-03 setting is 14–16 L at draining (actual, above non-usable). Simulator uses the MM switch setting.'],
+    ['Gauge frequency band','MM 55-A-14 specifies 3800–7300 Hz in the signal spec, but 3.8–7.5 kHz in step 6.'],
+    ['Sealant P/N','MM 55-A-04 step 11 quotes HG77-0087; 55-A-11 step 5 quotes HG32-0087 for the same cover joint. Not used in sim; flag to HG support.'],
+    ['Fuel flow / pressure sender wiring','Not shown in 71-C-20; EPM pin references taken from 71-B tables not yet extracted.'],
+    ['Engine-driven pump','Lycoming part, not in HG IPC; Lycoming documentation not yet in the source register.'],
+    ['IPC / MM numbering','Fuel uses HG code 55 (MM 55-A-xx) but IPC figures 5.4-00 / 5.4-02. Consistent between MM references and IPC, noted for mapping.'],
+  ];
+  document.getElementById('p-src').innerHTML = `
+   <h3 style="margin-top:0">What the simulator does, and where it comes from</h3>
+   <p class="src">Only behaviour stated in the source documents is simulated.</p>
+   <table><tr><th>Behaviour</th><th>Source</th></tr>
+   ${rules.map(r=>`<tr><td>${r[0]}</td><td class="src">${r[1].map(x=>SRC[x]).join('<br>')}</td></tr>`).join('')}</table>
+   <h3>Not simulated (no source data)</h3><ul>${notSim.map(x=>`<li>${x}</li>`).join('')}</ul>
+   <h3>Open questions / document discrepancies</h3>
+   <table><tr><th>#</th><th>Topic</th><th>Detail</th></tr>${oq.map((q,i)=>`<tr><td>OQ${i+1}</td><td>${q[0]}</td><td>${q[1]}</td></tr>`).join('')}</table>
+   <h3>Source register (this module)</h3>
+   <table><tr><th>Document</th><th>Revision</th></tr>
+    <tr><td>MM J70-002 Maintenance Manual &amp; ICA</td><td>Issue 08 (2024)</td></tr>
+    <tr><td>RFM J40-001 Flight Manual</td><td>Issue 11</td></tr>
+    <tr><td>Illustrated Parts Catalog G2</td><td>Rev D, printed 2026-11-21 (support.guimbal.com)</td></tr>
+   </table>`;
+}
+
+/* ============================================================
+   WIRING UI
+   ============================================================ */
+function activateTab(t){ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('act',x.dataset.t===t)); document.querySelectorAll('.tabpanel').forEach(x=>x.classList.toggle('hidden',x.id!=='p-'+t)); }
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>activateTab(t.dataset.t));
+document.getElementById('swMaster').onclick=()=>{S.master=!S.master; render();};
+document.getElementById('swPump').onclick=()=>{S.pumpSw=!S.pumpSw; log('Fuel pump switch '+(S.pumpSw?'ON':'OFF')); render();};
+document.getElementById('swBarc').onclick=()=>{S.barc=S.barc==="MAIN"?"BACKUP":"MAIN"; log('BARC switch '+S.barc); render();};
+document.getElementById('swValve').onclick=()=>{S.valveOn=!S.valveOn; log('Fuel valve '+(S.valveOn?'ON':'OFF')); render();};
+document.getElementById('cbB7').onclick=()=>{
+  if(S.b7In){ S.b7In=false; log('B7 pulled'); }
+  else { S.b7In=true; log('B7 reset'); if(S.faults.has('b7Pop')) S.faults.delete('b7Pop'); }
+  render();
+};
+document.getElementById('btnStart').onclick=()=>{
+  const m=model();
+  if(!S.master){ log('Start attempted — MASTER OFF, no cranking'); return; }
+  if(!(m.path && m.fpBand==='RISE')){ log('Start attempted — engine does not start (no fuel pressure / no fuel to carburettor). See MM Section F.'); flashMsg('Engine cranks but does not start — check fuel pressure, fuel valve (MM Section F).'); return; }
+  S.engine="RUNNING"; S.runT=0; log('Engine started'); render();
+};
+document.getElementById('btnStop').onclick=()=>{ S.engine="OFF"; S.runT=0; log('Engine shut down'); render(); };
+document.getElementById('fuelSlider').oninput=e=>{S.fuel=parseFloat(e.target.value); render();};
+document.getElementById('fuelSlider').onchange=e=>log('Fuel quantity set to '+S.fuel+' L');
+
+document.getElementById('epmKey3').onclick=()=>{S.flowMode=(S.flowMode+1)%3; render();};
+document.getElementById('epmTest').onclick=()=>{ if(!S.master) return; S.epmTestManual=true; log('EPM sensor test page viewed'); render(); };
+function flashMsg(t){ S.msg=t; S.msgT=4; render(); }
+
+
+const BRIEF = {
+  tank:"Stores the fuel: single crash-resistant bladder, 170 L max, 1.5 L unusable.",
+  vent:"Tank vent line, with rollover valve.",
+  cap:"Closes the filler neck (locking version available).",
+  probe:"Capacitive sensor (two coaxial tubes) measuring fuel quantity.",
+  board:"Converts the probe signal into a 3800–7300 Hz square wave for the EPM.",
+  float:"Independent low-fuel sensor; drives the LOW FUEL light via the BARC.",
+  pump:"Immersed electric boost pump (semi-centrifugal); pressurises the fuel line.",
+  screen:"Screen at the boost pump on the fuel manifold.",
+  mdrain:"Drains the non-usable fuel from the manifold.",
+  valve:"Shuts off the fuel supply to the engine (cabin bulkhead).",
+  gasc:"Filters the fuel and separates water; drain valve for sampling.",
+  flow:"Measures fuel flow for the EPM fuel computer.",
+  epump:"Engine-installed diaphragm pump; keeps fuel pressure in the green arc with the boost pump OFF.",
+  psens:"Measures fuel pressure for the EPM ‘FUEL P’ indication.",
+  carb:"Receives fuel from the engine pump (engine part).",
+  bus:"Main electrical bus, fed through the MASTER relay.",
+  b7:"5 A breaker: fuel pump, clutch (release) and carburettor heating.",
+  pumpsw:"Switches boost pump power to C-FUEL pin 1.",
+  cfuel:"6-pin connector between the fuel manifold and the aircraft harness.",
+  barc:"Fuel and rotor alarm unit: LOW FUEL light and tone, light test at MASTER ON, battery backup.",
+  lflight:"Amber caution at about 12 L remaining; short tone when it lights.",
+  epm:"Displays fuel quantity, FUEL P and fuel flow; self-tests the sensors.",
+  mgp:"Ground return for C-FUEL pin 6."
+};
+function buildKey(){
+  document.getElementById('keyTable').innerHTML = '<div class="keygrid">'+KEY.map((k,i)=>`<div class="keyitem" data-k="${k[0]}"><div class="n">${i+1}</div><div><div class="nm">${COMP[k[0]].name}</div><div class="fd">${BRIEF[k[0]]}</div></div></div>`).join('')+'</div>';
+  document.querySelectorAll('.keyitem').forEach(d=>d.onclick=()=>select(d.dataset.k));
+}
+
+buildSchematic(); buildKey(); buildMeas(); buildScen(); buildInstr(); buildSrc(); select('pump'); activateTab('info');
+log('Simulator loaded. Aircraft cold & dark, 60 L fuel.');
+let last=performance.now();
+setInterval(()=>{ const n=performance.now(); step(Math.min(0.5,(n-last)/1000)); last=n; },200);
+render();
+</script>
+</body>
+</html>
